@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "tfuped12-king12"
+  bucket = "tfuped1212-king12"
 
   # Prevent accidental deletion of this S3 bucket
   lifecycle {
@@ -38,6 +38,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
   }
 }
 
+
 //tfbackend configurations to store the state in the remote backend
 //S3 bucket for state storage with encryption
 //dyanmo for locking
@@ -45,7 +46,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 terraform {
   backend "s3" {
     # Replace this with your bucket name!
-    bucket         = "tfuped12-king12"
+    bucket         = "tfuped1212-king12"
     key            = "global/s3/terraform.tfstate"
     region         = "us-east-1"
 
