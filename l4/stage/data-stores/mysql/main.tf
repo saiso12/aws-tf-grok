@@ -14,10 +14,11 @@ resource "aws_db_instance" "example" {
   password            = var.db_password
 }
 
+
 terraform {
   backend "s3" {
     # Replace this with your bucket name!
-    bucket         = "tfuped1212-king12"
+    bucket         = "tfuped1213-king12"
     key            = "stage/data-stores/mysql/terraform.tfstate"
     region         = "us-east-1"
 
