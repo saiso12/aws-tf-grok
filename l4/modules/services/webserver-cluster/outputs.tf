@@ -13,3 +13,8 @@ output "alb_security_group_id" {
   value = aws_security_group.alb.id
   description = "The ID of the security group attacjed to the load balancer"
 }
+
+output "tags_list" {
+  value = aws_autoscaling_group.example.tag
+  description = "Tags applied"
+}

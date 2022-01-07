@@ -6,6 +6,7 @@ variable "cluster_name" {
 variable "db_remote_state_bucket" {
   description = "The name of the S3 bucket for the database's remote state"
   type        = string
+  
 }
 
 variable "db_remote_state_key" {
@@ -44,4 +45,13 @@ variable "server_port" {
   description = "The port the server will use for HTTP requests"
   type        = number
   default     = 8080
+}
+
+variable "enabling_autoscaling" {
+  description = "If set to true, enable auto scaling"
+  type = bool
+}
+variable "enable_new_user_data" {
+  type = bool
+  description = "If set to true, uses new startup script"
 }

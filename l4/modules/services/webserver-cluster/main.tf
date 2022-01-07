@@ -2,12 +2,16 @@ terraform {
   required_version = ">= 0.12, < 0.13"
 }
 
-
 resource "aws_launch_configuration" "example" {
   image_id        = "ami-061ac2e015473fbe2"
   instance_type   = var.instance_type
   security_groups = [aws_security_group.instance.id]
-  user_data       = data.template_file.user_data.rendered
+
+  user_data = (
+    length(data.template_file.user_data[*]) > 0 
+      ? data.template_file.user_data[0].rendered
+      : data.template_file.user_data_new[0].rendered
+  )
 
   # Required when using a launch configuration with an auto scaling group.
   # https://www.terraform.io/docs/providers/aws/r/launch_configuration.html
@@ -17,6 +21,8 @@ resource "aws_launch_configuration" "example" {
 }
 
 data "template_file" "user_data" {
+  count = var.enable_new_user_data ? 0 : 1
+
   template = file("${path.module}/user-data.sh")
 
   vars = {
@@ -26,6 +32,15 @@ data "template_file" "user_data" {
   }
 }
 
+data "template_file" "user_data_new" {
+  count = var.enable_new_user_data ? 1 : 0
+
+  template = file("${path.module}/user-data-new.sh")
+
+  vars = {
+    server_port = var.server_port
+  }
+}
 resource "aws_autoscaling_group" "example" {
   launch_configuration = aws_launch_configuration.example.name
   vpc_zone_identifier  = data.aws_subnet_ids.default.ids
@@ -43,7 +58,11 @@ resource "aws_autoscaling_group" "example" {
   }
 
   dynamic "tag" {
-    for_each = var.custom_tags
+    for_each = {
+      for key, value in var.custom_tags:
+      key => upper(value)
+      if key != "Name"
+    }
 
     content {
       key = tag.key
@@ -67,7 +86,6 @@ resource "aws_security_group_rule" "allow_server_http_inbound" {
   protocol    = local.tcp_protocol
   cidr_blocks = local.all_ips
 }
-
 
 resource "aws_lb" "example" {
   name               = var.cluster_name
@@ -148,6 +166,37 @@ resource "aws_security_group_rule" "allow_all_outbound" {
   to_port     = local.any_port
   protocol    = local.any_protocol
   cidr_blocks = local.all_ips
+}
+
+resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
+  count = var.enabling_autoscaling ? 1 : 0
+
+  scheduled_action_name = "${var.cluster_name}-scale-out-during-business-hours"
+  min_size = 2
+  max_size = 2
+  desired_capacity = 2
+  recurrence = "0 9 * * *"
+  autoscaling_group_name = aws_autoscaling_group.example.name
+}
+
+//code uses format function to extract the
+resource "aws_cloudwatch_metric_alarm" "low_cpu_credit_balance" {
+  count = format("%.1s", var.instance_type) == "t" ? 1 : 0 
+
+  alarm_name = "${var.cluster_name}-low-cpu-credit-balance"
+  namespace   = "AWS/EC2"
+  metric_name = "CPUCreditBalance"
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.example.name
+  }
+
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 1
+  period              = 300
+  statistic           = "Minimum"
+  threshold           = 10
+  unit                = "Count"
 }
 
 
